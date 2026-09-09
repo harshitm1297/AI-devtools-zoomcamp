@@ -1,0 +1,331 @@
+openapi: 3.1.0
+info:
+  title: Sprintlane API
+  version: 0.1.0
+  description: API contract for the Sprintlane invite-only Kanban board.
+servers:
+  - url: http://localhost:8091
+security:
+  - bearerAuth: []
+paths:
+  /health:
+    get:
+      security: []
+      summary: Check service health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                required: [status]
+  /v1/auth/login:
+    post:
+      security: []
+      summary: Sign in to Sprintlane
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Demo access token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/workspace:
+    get:
+      summary: Get the signed-in user's current workspace
+      responses:
+        '200':
+          description: Workspace and members
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workspace' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/boards:
+    get:
+      summary: List accessible boards without their tasks
+      responses:
+        '200':
+          description: Board summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/BoardSummary' }
+    post:
+      summary: Create a board with the four default columns
+      responses:
+        '201':
+          description: Created board
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateBoardRequest' }
+  /v1/boards/{boardId}:
+    parameters:
+      - $ref: '#/components/parameters/BoardId'
+    get:
+      summary: Get one board with its columns and tasks
+      responses:
+        '200':
+          description: Board details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Board' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/boards/{boardId}/columns:
+    parameters:
+      - $ref: '#/components/parameters/BoardId'
+    post:
+      summary: Add a custom column to a board
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateColumnRequest' }
+      responses:
+        '201':
+          description: Created column
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Column' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/boards/{boardId}/tasks:
+    parameters:
+      - $ref: '#/components/parameters/BoardId'
+    post:
+      summary: Create a task in a board column
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTaskRequest' }
+      responses:
+        '201':
+          description: Created task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/boards/{boardId}/tasks/{taskId}:
+    parameters:
+      - $ref: '#/components/parameters/BoardId'
+      - $ref: '#/components/parameters/TaskId'
+    patch:
+      summary: Edit or move a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTaskRequest' }
+      responses:
+        '200':
+          description: Updated task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Task' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/boards/{boardId}/tasks/{taskId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/BoardId'
+      - $ref: '#/components/parameters/TaskId'
+    post:
+      summary: Add a comment to a task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommentRequest' }
+      responses:
+        '201':
+          description: Created comment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+  /v1/invitations:
+    post:
+      summary: Create a shareable workspace invitation code
+      responses:
+        '201':
+          description: Invitation code
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Invitation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /v1/demo/reset:
+    post:
+      summary: Reset the development in-memory store to its seed data
+      responses:
+        '200':
+          description: Seed data restored
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, example: reset }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: token
+  parameters:
+    BoardId:
+      name: boardId
+      in: path
+      required: true
+      schema: { type: string }
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema: { type: string }
+  responses:
+    Unauthorized:
+      description: A valid bearer token is required
+    Forbidden:
+      description: The signed-in user does not have permission
+    NotFound:
+      description: The requested resource does not exist
+    ValidationError:
+      description: Request data violates a board or membership rule
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType]
+      properties:
+        accessToken: { type: string }
+        tokenType: { type: string, example: bearer }
+    Member:
+      type: object
+      required: [id, name, initials, role]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        initials: { type: string }
+        role: { type: string, enum: [Project manager, Team member] }
+    Workspace:
+      type: object
+      required: [id, name, currentUserId, members]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        currentUserId: { type: string }
+        members:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+    Column:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    Comment:
+      type: object
+      required: [id, authorId, body, createdAt]
+      properties:
+        id: { type: string }
+        authorId: { type: string }
+        body: { type: string }
+        createdAt: { type: string, format: date-time }
+    Task:
+      type: object
+      required: [id, title, description, assigneeId, columnId, priority, dueDate, labels, comments]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        assigneeId: { type: [string, 'null'] }
+        columnId: { type: string }
+        priority: { type: string, enum: [Low, Medium, High] }
+        dueDate: { type: [string, 'null'], format: date }
+        labels:
+          type: array
+          items: { type: string }
+        comments:
+          type: array
+          items: { $ref: '#/components/schemas/Comment' }
+    BoardSummary:
+      type: object
+      required: [id, name, columns]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        columns:
+          type: array
+          items: { $ref: '#/components/schemas/Column' }
+    Board:
+      allOf:
+        - $ref: '#/components/schemas/BoardSummary'
+        - type: object
+          required: [tasks]
+          properties:
+            tasks:
+              type: array
+              items: { $ref: '#/components/schemas/Task' }
+    CreateBoardRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+    CreateColumnRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+    CreateTaskRequest:
+      type: object
+      required: [title, columnId, priority]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, default: '' }
+        assigneeId: { type: [string, 'null'] }
+        columnId: { type: string }
+        priority: { type: string, enum: [Low, Medium, High] }
+        dueDate: { type: [string, 'null'], format: date }
+        labels:
+          type: array
+          items: { type: string }
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        assigneeId: { type: [string, 'null'] }
+        columnId: { type: string }
+        priority: { type: string, enum: [Low, Medium, High] }
+        dueDate: { type: [string, 'null'], format: date }
+        labels:
+          type: array
+          items: { type: string }
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body: { type: string, minLength: 1, maxLength: 2000 }
+    Invitation:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }

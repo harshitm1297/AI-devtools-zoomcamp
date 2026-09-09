@@ -1,0 +1,1 @@
+"""Sprintlane FastAPI application."""

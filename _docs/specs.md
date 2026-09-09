@@ -86,7 +86,7 @@ and move work through a visible workflow.
 ## Non-goals for this homework
 
 - Email delivery, notifications, reminders, and @mentions.
-- Real-time updates, drag-and-drop interaction, attachments, and file uploads.
+- Real-time updates, attachments, and file uploads.
 - Task deletion, audit logs, reporting, search, filters, and analytics.
 - Multiple manager roles, billing, public boards, or external integrations.
 - Mobile applications.
