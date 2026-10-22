@@ -1,0 +1,9 @@
+apiVersion: 1
+providers:
+  - name: Guardian Angel
+    folder: Guardian Angel
+    type: file
+    disableDeletion: true
+    options:
+      path: /var/lib/grafana/dashboards
+

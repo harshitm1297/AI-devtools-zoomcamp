@@ -1,0 +1,16 @@
+name: Project work item
+description: Track one scoped Guardian Angel change.
+title: "[project] "
+body:
+  - type: textarea
+    id: problem
+    attributes: {label: Problem, description: What user or operational problem is being solved?}
+    validations: {required: true}
+  - type: textarea
+    id: acceptance
+    attributes: {label: Acceptance criteria, description: Use Given/When/Then statements.}
+    validations: {required: true}
+  - type: textarea
+    id: verification
+    attributes: {label: Verification plan, description: List automated and manual evidence.}
+    validations: {required: true}

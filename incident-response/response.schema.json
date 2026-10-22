@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "incident_id": {"type": "string"},
+    "diagnosis": {"type": "string"},
+    "evidence_files": {"type": "array", "items": {"type": "string"}},
+    "action": {"type": "string"},
+    "tests": {"type": "array", "items": {"type": "string"}},
+    "outcome": {"enum": ["fixed", "proposed", "escalated"]},
+    "final_line": {"type": "string"}
+  },
+  "required": ["incident_id", "diagnosis", "evidence_files", "action", "tests", "outcome", "final_line"],
+  "additionalProperties": false
+}
+

@@ -1,0 +1,17 @@
+version: 1
+default_access: read-only
+prohibited:
+  - production credentials
+  - receipt images or extracted receipt text
+  - customer or payment data
+  - commit, push, merge, deploy, restart, or infrastructure changes
+workspace_write:
+  required_alert: GuardianAngelAssessmentFailures
+  required_label: allow_fix=true
+  required_environment: RESPONDER_ALLOW_WORKSPACE_WRITE=true
+  workspace: isolated worktree only
+  verification: targeted regression test and full test suite
+recovery:
+  human_approval_required: true
+  verify_with: health check plus assessment smoke test
+

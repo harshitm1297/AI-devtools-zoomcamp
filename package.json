@@ -1,0 +1,8 @@
+{
+  "name": "guardian-angel-frontend",
+  "private": true,
+  "scripts": {
+    "test": "node --test frontend/tests/*.test.js",
+    "check": "node --check frontend/core.js && node --check frontend/app.js"
+  }
+}

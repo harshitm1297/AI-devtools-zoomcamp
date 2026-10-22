@@ -1,0 +1,84 @@
+name: guardian-angel
+
+services:
+  app:
+    image: guardian-angel:${GUARDIAN_ANGEL_TAG:-local}
+    build: .
+    ports:
+      - "127.0.0.1:${GUARDIAN_ANGEL_PORT:-8000}:8000"
+    environment:
+      DATABASE_PATH: /data/guardian_angel.db
+      AI_MODE: ${AI_MODE:-demo}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_VISION_MODEL: ${OPENAI_VISION_MODEL:-gpt-6-astra}
+      OPENAI_EXPLANATION_MODEL: ${OPENAI_EXPLANATION_MODEL:-gpt-6-astra}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      APP_ENV: local-compose
+      APP_VERSION: ${GUARDIAN_ANGEL_TAG:-local}
+      OTEL_EXPORTER_MODE: otlp
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_METRIC_EXPORT_INTERVAL_MS: 5000
+    volumes:
+      - guardian-data:/data
+    restart: unless-stopped
+    depends_on:
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.135.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./observability/collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on: [loki, tempo]
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    command: ["--config.file=/etc/prometheus/prometheus.yaml"]
+    volumes:
+      - ./observability/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on: [otel-collector]
+
+  loki:
+    image: grafana/loki:3.5.5
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./observability/loki.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+  tempo:
+    image: grafana/tempo:2.8.2
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./observability/tempo.yaml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+
+  grafana:
+    image: grafana/grafana:12.2.0
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/alerts.yaml:/etc/grafana/provisioning/alerting/alerts.yaml:ro
+      - ./observability/dashboard.json:/var/lib/grafana/dashboards/guardian-angel.json:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on: [prometheus, loki, tempo]
+
+volumes:
+  guardian-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+

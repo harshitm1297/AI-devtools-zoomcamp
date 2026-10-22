@@ -1,0 +1,5 @@
+{
+  "version": "dev",
+  "ai_mode": "ollama",
+  "live_receipt_extraction": true
+}

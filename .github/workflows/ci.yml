@@ -1,0 +1,22 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, project]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python -m pip install --upgrade pip
+      - run: pip install ".[agents]" pytest
+      - run: pytest -q
+      - run: npm test
+      - run: npm run check
+      - run: python agent-hooks/privacy_guard.py
+      - run: docker build -t guardian-angel:${{ github.sha }} .
+

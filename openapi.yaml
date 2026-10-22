@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: Guardian Angel API
+  version: 0.1.0
+  description: Explainable receipt-based spending-risk assessment.
+servers:
+  - url: http://127.0.0.1:8000
+paths:
+  /healthz:
+    get:
+      operationId: health
+      tags: [operations]
+      responses:
+        "200":
+          description: Database is reachable.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Health"}
+  /version:
+    get:
+      operationId: version
+      tags: [operations]
+      responses:
+        "200":
+          description: Deployed version and AI mode.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [version, ai_mode, live_receipt_extraction]
+                properties:
+                  version: {type: string}
+                  ai_mode: {type: string, enum: [demo, ollama, openai]}
+                  live_receipt_extraction: {type: boolean}
+  /api/purchases:
+    get:
+      operationId: listPurchases
+      tags: [purchases]
+      parameters:
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        "200":
+          description: Recent purchases.
+          content:
+            application/json:
+              schema: {type: array, items: {$ref: "#/components/schemas/Purchase"}}
+  /api/receipts/extract:
+    post:
+      operationId: extractReceipt
+      tags: [receipts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_data_url]
+              properties:
+                image_data_url: {type: string, minLength: 30}
+                is_demo: {type: boolean, default: false}
+      responses:
+        "200":
+          description: Proposed fields requiring confirmation.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/ReceiptExtraction"}
+        "415": {description: Unsupported media type.}
+        "502": {description: Extraction provider unavailable.}
+        "503": {description: Uploaded receipt extraction is disabled in demo mode.}
+  /api/receipts/{receipt_id}/confirm:
+    post:
+      operationId: confirmReceipt
+      tags: [receipts]
+      parameters:
+        - {$ref: "#/components/parameters/ReceiptId"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/ReceiptFields"}
+      responses:
+        "201":
+          description: Confirmed purchase.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Purchase"}
+        "404": {description: Receipt not found.}
+        "409": {description: Receipt already confirmed.}
+  /api/purchases/{purchase_id}/assess:
+    post:
+      operationId: assessPurchase
+      tags: [assessments]
+      parameters:
+        - {$ref: "#/components/parameters/PurchaseId"}
+      responses:
+        "201":
+          description: Persisted grounded assessment.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Assessment"}
+        "404": {description: Purchase not found.}
+        "502": {description: Provider or grounding failure.}
+  /api/assessments/{assessment_id}:
+    get:
+      operationId: getAssessment
+      tags: [assessments]
+      parameters:
+        - {$ref: "#/components/parameters/AssessmentId"}
+      responses:
+        "200":
+          description: Stored assessment.
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/Assessment"}
+        "404": {description: Assessment not found.}
+  /api/assessments/{assessment_id}/feedback:
+    post:
+      operationId: submitFeedback
+      tags: [assessments]
+      parameters:
+        - {$ref: "#/components/parameters/AssessmentId"}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [helpful]
+              properties: {helpful: {type: boolean}}
+      responses:
+        "200":
+          description: Feedback saved or updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assessment_id, helpful]
+                properties:
+                  assessment_id: {type: string}
+                  helpful: {type: boolean}
+        "404": {description: Assessment not found.}
+components:
+  parameters:
+    ReceiptId: {name: receipt_id, in: path, required: true, schema: {type: string}}
+    PurchaseId: {name: purchase_id, in: path, required: true, schema: {type: string}}
+    AssessmentId: {name: assessment_id, in: path, required: true, schema: {type: string}}
+  schemas:
+    Health:
+      type: object
+      required: [status]
+      properties: {status: {type: string, const: ok}}
+    ReceiptFields:
+      type: object
+      required: [merchant, purchase_date, currency, total, category]
+      properties:
+        merchant: {type: string, minLength: 1, maxLength: 100}
+        purchase_date: {type: string, format: date}
+        currency: {type: string, pattern: "^[A-Z]{3}$"}
+        total: {type: number, exclusiveMinimum: 0, maximum: 100000}
+        category: {$ref: "#/components/schemas/Category"}
+    ReceiptExtraction:
+      allOf:
+        - {$ref: "#/components/schemas/ReceiptFields"}
+        - type: object
+          required: [receipt_id, mode, requires_confirmation]
+          properties:
+            receipt_id: {type: string}
+            mode: {type: string, enum: [demo, ollama, openai]}
+            requires_confirmation: {type: boolean, const: true}
+    Category:
+      type: string
+      enum: [groceries, dining, transport, shopping, entertainment, other]
+    Purchase:
+      type: object
+      required: [id, merchant, purchase_date, currency, amount, category, source]
+      properties:
+        id: {type: string}
+        merchant: {type: string}
+        purchase_date: {type: string, format: date}
+        currency: {type: string}
+        amount: {type: number}
+        category: {$ref: "#/components/schemas/Category"}
+        source: {type: string, enum: [seed, receipt]}
+    EvidencePurchase:
+      allOf:
+        - {$ref: "#/components/schemas/Purchase"}
+        - type: object
+          required: [similarity]
+          properties: {similarity: {type: number}}
+    Assessment:
+      type: object
+      required: [id, purchase_id, assessment, explanation, suggested_action, evidence, model_name]
+      properties:
+        id: {type: string}
+        purchase_id: {type: string}
+        assessment: {type: string, enum: [typical, unusual, insufficient_history]}
+        explanation: {type: string}
+        suggested_action: {type: string}
+        evidence: {type: array, items: {$ref: "#/components/schemas/EvidencePurchase"}}
+        median_amount: {type: [number, "null"]}
+        threshold_amount: {type: [number, "null"]}
+        model_name: {type: string}
+

@@ -1,0 +1,9 @@
+[
+  {"id": "eval-01", "category": "groceries", "history": [28, 30, 32, 31, 29], "amount": 50, "expected": "unusual"},
+  {"id": "eval-02", "category": "groceries", "history": [28, 30, 32, 31, 29], "amount": 42, "expected": "typical"},
+  {"id": "eval-03", "category": "dining", "history": [16, 18, 20, 17, 19], "amount": 35, "expected": "unusual"},
+  {"id": "eval-04", "category": "dining", "history": [16, 18, 20, 17, 19], "amount": 22, "expected": "typical"},
+  {"id": "eval-05", "category": "transport", "history": [8, 9, 10, 9, 8], "amount": 16, "expected": "unusual"},
+  {"id": "eval-06", "category": "shopping", "history": [40, 45, 50, 46, 44], "amount": 62, "expected": "typical"}
+]
+

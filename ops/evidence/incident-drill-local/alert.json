@@ -1,0 +1,17 @@
+{
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "GuardianAngelAssessmentFailures",
+        "service": "guardian-angel",
+        "severity": "warning"
+      },
+      "annotations": {
+        "summary": "Synthetic rubric audit incident"
+      },
+      "startsAt": "2026-10-22T19:00:00Z"
+    }
+  ]
+}
